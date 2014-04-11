@@ -8,7 +8,14 @@
 	import flash.text.TextField;
 	import flash.text.TextFormat;
 	import com.greensock.TweenLite;
+	import com.greensock.plugins.ColorMatrixFilterPlugin;
+	import com.greensock.plugins.TweenPlugin;
+	import flash.display.Shape;
+	import flash.media.Sound;
+	import flash.net.URLRequest;
+	import flash.media.SoundChannel;
 	
+	TweenPlugin.activate([ColorMatrixFilterPlugin]);
 	
 	public class Main extends MovieClip {
 		
@@ -19,12 +26,57 @@
 		private var puntos:int;
 		private var vidas:int;
 		
+		private var inicio:MovieClip;
+		private var sndMuere:Sound;
+		private var sndBala:Sound;
+		
 		public function Main() {
+			inicio = new Home() as MovieClip;
+			inicio.y = -inicio.height;
+			TweenLite.to(inicio, 0.5, {y:0});
+			addChild(inicio);
+			inicio.botonJugar.addEventListener(MouseEvent.CLICK, btnJugarClick);
+			inicio.botonJugar.buttonMode = true;
+			
+			var fondo:Shape = new Shape();
+			fondo.graphics.beginFill(0xFFFFFF);
+			fondo.graphics.drawRect(0,0,800,600);
+			fondo.graphics.endFill();
+			addChildAt(fondo, 0);
+			
+			sndMuere = new Sound();
+			sndMuere.load(new URLRequest("sounds/62386__fons__eng-1.mp3"));
+			
+			sndBala = new Sound();
+			sndBala.load(new URLRequest("sounds/220612__senitiel__pistol2.mp3"));
+		}
+			
+		private function btnJugarClick(e:MouseEvent):void{
+			TweenLite.to(inicio, 0.5, {y:-inicio.height, onComplete:iniciaJuego});
+		}
+		
+		private function iniciaJuego(){
+			removeChild(inicio);
+			
+			var sndFondo:Sound = new Sound();
+			sndFondo.load(new URLRequest("sounds/hell-Mike_Koenig-144950046.mp3"));
+			//var chnFondo:SoundChannel = sndFondo.play();
+			
+			crearTimer();
+			crearCarteles();
+			
+			stage.addEventListener(Event.ENTER_FRAME, mover);
+		}
+		
+		private function crearTimer(){
 			timer = new Timer(1500);
 			timer.addEventListener(TimerEvent.TIMER, crearMonstruos);
 			timer.start();
-			
-			vidas = 30;
+		}
+		
+		private function crearCarteles(){
+			vidas = 100;
+			puntos = 0;
 			
 			puntaje_txt = new TextField;
 			puntaje_txt.opaqueBackground = true;
@@ -41,12 +93,8 @@
 			vidas_txt.height = puntaje_txt.textHeight * 1.5;
 			vidas_txt.x = stage.stageWidth - vidas_txt.width;
 			
-			puntos = 0;
-			
 			addChild(puntaje_txt);
 			addChild(vidas_txt);
-			
-			stage.addEventListener(Event.ENTER_FRAME, mover);
 		}
 		
 		private function mover(e:Event):void{
@@ -55,14 +103,16 @@
 				for(var i:int = 0; i < hijos; i++){
 					var mc:MovieClip = getChildAt(i) as MovieClip;
 					if(mc){
-						mc.y += 0.5;
+						mc.x += 1;
 						
-						if(mc.y >= stage.stageHeight){
+						if(mc.x >= stage.stageWidth){
 							vidas--;
 							
 							vidas_txt.text = "Vidas: " + vidas.toString();
 							
 							removeChild(mc);
+							
+							TweenLite.to(this, 0.5, {colorMatrixFilter:{colorize:0xff0000, amount:0.5}, onComplete:regresarEstado});
 							
 							hijos--
 							
@@ -94,8 +144,8 @@
 				enemigo.name = "enemigo2";
 			}
 			
-			enemigo.x = Math.random() * stage.stageWidth;
-			enemigo.y = 0;
+			enemigo.y = Math.random() * stage.stageHeight;
+			enemigo.x = 0;
 			
 			enemigo.addEventListener(MouseEvent.CLICK, matar);
 			
@@ -114,28 +164,37 @@
 				//removeChild(mc);
 				mc.removeEventListener(MouseEvent.CLICK, matar);
 				
-				TweenLite.to(mc, 0.5, {alpha:0, onComplete:removeChild, onCompleteParams:[mc]});
+				TweenLite.to(mc, 0.5, {alpha:0, scaleX:0, scaleY:0, onComplete:removeChild, onCompleteParams:[mc]});
 				
 				puntos++;
 				
 				puntaje_txt.text = "Puntaje: " + puntos.toString();
 				
+				sndMuere.play();
+				
 			}
 			else{
+				sndBala.play();
 				if(nombre == "enemigo1"){
 					
-					mc.scaleX = 1.5;
-					mc.scaleY = 1.5;
-					TweenLite.to(mc, 0.3, {x:"+50", scaleX:1, scaleY:1});
+					mc.scaleX = 0.5;
+					mc.scaleY = 0.5;
+					TweenLite.to(mc, 0.3, {y:"+10", scaleX:1, scaleY:1});
 				}
 				else{
-					mc.scaleX = 1.5;
-					mc.scaleY = 1.5;
-					TweenLite.to(mc, 0.3, {rotation:"+50", scaleX:1, scaleY:1 });
+					mc.scaleX = 0.5;
+					mc.scaleY = 0.5;
+					TweenLite.to(mc, 0.3, {rotation:"+30", scaleX:1, scaleY:1 });
 				}
 				
 			}
 		}
+		
+		private function regresarEstado(){
+			TweenLite.to(this, 0.5, {colorMatrixFilter:{colorize:0xff0000, amount:0}});
+							
+		}
+		
 	}
 	
 }
